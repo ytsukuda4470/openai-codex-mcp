@@ -21,8 +21,8 @@ from fastmcp import FastMCP
 mcp = FastMCP("OpenAI Codex MCP Server")
 
 
-def run_codex(prompt: str, model: Optional[str] = None, 
-              images: Optional[List[str]] = None, 
+def run_codex(prompt: str, model: Optional[str] = None,
+              images: Optional[List[str]] = None,
               approval_mode: str = "suggest",
               quiet: bool = True,
               json_output: bool = False,
@@ -30,38 +30,41 @@ def run_codex(prompt: str, model: Optional[str] = None,
               additional_args: Optional[List[str]] = None) -> Dict[str, Any]:
     """
     Run the OpenAI Codex CLI tool with the given parameters.
-    
+
     Args:
         prompt: The prompt to send to Codex
         model: The model to use (e.g., "o4-mini", "o4-preview", "gpt-4.1")
         images: List of image paths to include
         approval_mode: How much autonomy the agent receives ("suggest", "auto-edit", "full-auto")
-        quiet: Run in non-interactive mode
+        quiet: Ignored (kept for API compatibility; codex exec is always non-interactive)
         json_output: Return structured JSON output
         provider: AI provider to use (openai, azure, gemini, ollama, etc.)
         additional_args: Additional CLI arguments to pass to Codex
-        
+
     Returns:
         A dictionary containing the response from Codex
     """
-    # Build command
-    cmd = ["codex"]
-    
-    # Add options
-    if quiet:
-        cmd.append("--quiet")
-    
+    # Build command: use "codex exec" for non-interactive execution (v0.120.0+)
+    cmd = ["codex", "exec"]
+
+    # 呼び出し元のカレントディレクトリをワーキングルートとして渡す
+    cwd = os.getcwd()
+    cmd.extend(["-C", cwd])
+
+    # --quiet は v0.120.0 で廃止。codex exec が非対話モード。
+
     if json_output:
         cmd.append("--json")
-    
+
     if model:
         cmd.extend(["--model", model])
-    
+
     if provider:
-        cmd.extend(["--provider", provider])
-    
-    if approval_mode and approval_mode != "suggest":
-        cmd.extend(["--approval-mode", approval_mode])
+        cmd.extend(["-c", f'provider="{provider}"'])
+
+    # approval_mode マッピング (v0.120.0: --full-auto or default)
+    if approval_mode in ("auto-edit", "full-auto"):
+        cmd.append("--full-auto")
     
     if images:
         for image_path in images:
@@ -79,7 +82,7 @@ def run_codex(prompt: str, model: Optional[str] = None,
                         temp.write(image_path.encode())
                         image_path = temp.name
             
-            cmd.extend(["--image", image_path])
+            cmd.extend(["-i", image_path])
     
     if additional_args:
         cmd.extend(additional_args)
