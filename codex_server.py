@@ -90,27 +90,56 @@ def run_codex(prompt: str, model: Optional[str] = None,
     # Add the prompt
     cmd.append(prompt)
     
+    # -o フラグで最終メッセージをファイルに書き出す（確実な取得のため）
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".txt", mode="w") as out_file:
+        output_path = out_file.name
+    cmd.extend(["-o", output_path])
+
     print(f"Executing command: {' '.join(cmd)}", file=sys.stderr)
-    
+
+    # タイムアウト: デフォルト300秒（5分）
+    TIMEOUT_SECONDS = 300
+
     try:
-        # Run the command and capture output
         result = subprocess.run(
             cmd,
             text=True,
             capture_output=True,
-            check=True
+            stdin=subprocess.DEVNULL,  # stdin を閉じて "Reading additional input from stdin..." のブロックを防ぐ
+            check=True,
+            timeout=TIMEOUT_SECONDS
         )
-        
-        # Parse the output - for quiet mode, we get just the final output
-        output = result.stdout.strip()
-        
+
+        # -o で書き出されたファイルから最終メッセージを読む
+        output = ""
+        try:
+            with open(output_path, "r") as f:
+                output = f.read().strip()
+        except Exception:
+            pass
+        finally:
+            Path(output_path).unlink(missing_ok=True)
+
+        # -o が空の場合は stdout にフォールバック
+        if not output:
+            output = result.stdout.strip()
+
         return {
             "status": "success",
             "output": output,
             "stderr": result.stderr,
             "command": " ".join(cmd)
         }
+    except subprocess.TimeoutExpired as e:
+        Path(output_path).unlink(missing_ok=True)
+        print(f"Codex timed out after {TIMEOUT_SECONDS}s", file=sys.stderr)
+        return {
+            "status": "error",
+            "error": f"Codex timed out after {TIMEOUT_SECONDS} seconds. The task may be too complex or Codex is unresponsive.",
+            "command": " ".join(cmd)
+        }
     except subprocess.CalledProcessError as e:
+        Path(output_path).unlink(missing_ok=True)
         print(f"Error running codex: {e}", file=sys.stderr)
         return {
             "status": "error",
@@ -121,6 +150,7 @@ def run_codex(prompt: str, model: Optional[str] = None,
             "command": " ".join(cmd)
         }
     except Exception as e:
+        Path(output_path).unlink(missing_ok=True)
         print(f"Unexpected error: {e}", file=sys.stderr)
         return {
             "status": "error",
