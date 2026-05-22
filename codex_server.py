@@ -21,6 +21,27 @@ from fastmcp import FastMCP
 mcp = FastMCP("OpenAI Codex MCP Server")
 
 
+def _build_common_flags(model: Optional[str] = None,
+                        provider: Optional[str] = None,
+                        approval_mode: str = "suggest") -> List[str]:
+    """codex / codex exec の両方で共通して使えるフラグを組み立てる（v0.120.0）。
+
+    run_codex と codex_interactive で CLI 組み立てが二重化していると、
+    codex CLI の仕様変更時に片方だけ移行漏れが起きる（v0.120.0 移行で実際に発生）。
+    共通フラグを1箇所に集約してドリフトを防ぐ。
+    """
+    flags: List[str] = []
+    if model:
+        flags.extend(["--model", model])
+    if provider:
+        # v0.120.0: 設定キーは model_provider（旧 --provider フラグは廃止）
+        flags.extend(["-c", f'model_provider="{provider}"'])
+    # approval_mode マッピング（v0.120.0: --full-auto or default。旧 --approval-mode は廃止）
+    if approval_mode in ("auto-edit", "full-auto"):
+        flags.append("--full-auto")
+    return flags
+
+
 def run_codex(prompt: str, model: Optional[str] = None,
               images: Optional[List[str]] = None,
               approval_mode: str = "suggest",
@@ -56,16 +77,8 @@ def run_codex(prompt: str, model: Optional[str] = None,
     if json_output:
         cmd.append("--json")
 
-    if model:
-        cmd.extend(["--model", model])
+    cmd.extend(_build_common_flags(model=model, provider=provider, approval_mode=approval_mode))
 
-    if provider:
-        cmd.extend(["-c", f'provider="{provider}"'])
-
-    # approval_mode マッピング (v0.120.0: --full-auto or default)
-    if approval_mode in ("auto-edit", "full-auto"):
-        cmd.append("--full-auto")
-    
     if images:
         for image_path in images:
             # For temp files received from Claude, save the content
@@ -282,17 +295,10 @@ def codex_interactive(
     Note: This starts an interactive session that requires terminal access.
     For non-interactive use, prefer the codex_agent tool.
     """
+    # 対話モードは素の `codex [PROMPT]`（exec サブコマンドは付けない）。v0.120.0
     cmd = ["codex"]
-    
-    if model:
-        cmd.extend(["--model", model])
-    
-    if provider:
-        cmd.extend(["--provider", provider])
-    
-    if approval_mode and approval_mode != "suggest":
-        cmd.extend(["--approval-mode", approval_mode])
-    
+    cmd.extend(_build_common_flags(model=model, provider=provider, approval_mode=approval_mode))
+
     if initial_prompt:
         cmd.append(initial_prompt)
     
