@@ -1,42 +1,22 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# dependencies
-/node_modules
-
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
+# Python
+venv/
+__pycache__/
+*.py[cod]
+openai_codex_mcp.egg-info/
+build/
+dist/
 
 # env files
 .env
 .env.local
-.env.development
-.env.production
-.env.local.org
 
-# venv
-venv/
-openai_codex_mcp.egg-info/
-__pycache__/
-# .DS_Store
+# OS
 .DS_Store
 
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
-tmp/
-
-/public/images/
+# Claude Code
 .claude/
+
+# misc
+tmp/
