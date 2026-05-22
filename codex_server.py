@@ -45,7 +45,6 @@ def _build_common_flags(model: Optional[str] = None,
 def run_codex(prompt: str, model: Optional[str] = None,
               images: Optional[List[str]] = None,
               approval_mode: str = "suggest",
-              quiet: bool = True,
               json_output: bool = False,
               provider: Optional[str] = None,
               additional_args: Optional[List[str]] = None) -> Dict[str, Any]:
@@ -57,7 +56,6 @@ def run_codex(prompt: str, model: Optional[str] = None,
         model: The model to use (e.g., "o4-mini", "o4-preview", "gpt-4.1")
         images: List of image paths to include
         approval_mode: How much autonomy the agent receives ("suggest", "auto-edit", "full-auto")
-        quiet: Ignored (kept for API compatibility; codex exec is always non-interactive)
         json_output: Return structured JSON output
         provider: AI provider to use (openai, azure, gemini, ollama, etc.)
         additional_args: Additional CLI arguments to pass to Codex
@@ -244,7 +242,6 @@ def codex_agent(
         model=model,
         images=images or [],
         approval_mode=approval_mode,
-        quiet=True,
         json_output=json_output,
         provider=provider,
         additional_args=additional_args or []
